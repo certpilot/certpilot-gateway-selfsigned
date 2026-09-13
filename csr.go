@@ -142,16 +142,27 @@ func issueFromCSR(req *providerv1.IssueCertificateRequest) (*providerv1.IssueCer
 		return nil, err
 	}
 
+	// The one place in this gateway a declared key usage is not advisory: the
+	// certificate is built here, so what the template says is exactly what
+	// the certificate carries — see #31.
+	keyUsage, extKeyUsage, err := resolveUsage(req.KeyUsage, req.ExtendedKeyUsage,
+		x509.KeyUsageDigitalSignature|x509.KeyUsageKeyEncipherment,
+		[]x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth})
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
-	// Built here, from nothing the request asked for beyond its public key.
+	// Built here, from nothing the request asked for beyond its public key and
+	// its declared key usage.
 	template := &x509.Certificate{
 		SerialNumber:          serial,
 		Subject:               pkix.Name{CommonName: domains[0], Organization: []string{"CertPilot Self-Signed"}},
 		DNSNames:              domains,
 		NotBefore:             now.Add(-time.Minute),
 		NotAfter:              now.Add(time.Duration(validityDays) * 24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		KeyUsage:              keyUsage,
+		ExtKeyUsage:           extKeyUsage,
 		BasicConstraintsValid: true,
 		IsCA:                  false,
 	}

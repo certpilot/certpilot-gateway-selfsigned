@@ -50,11 +50,20 @@ func NewProvider() *Provider {
 // over gRPC. Convenient, mTLS-protected, and still the weaker pattern, because
 // the key exists somewhere it did not need to.
 func (p *Provider) IssueCertificate(ctx context.Context, req *providerv1.IssueCertificateRequest) (*providerv1.IssueCertificateResponse, error) {
+	logIgnoredProfile(req.CaProfile)
+
 	if len(req.CsrPem) > 0 {
 		return issueFromCSR(req)
 	}
 
 	slog.Info("issuing self-signed certificate", "domains", req.Domains)
+
+	keyUsage, extKeyUsage, err := resolveUsage(req.KeyUsage, req.ExtendedKeyUsage,
+		x509.KeyUsageDigitalSignature|x509.KeyUsageKeyEncipherment|x509.KeyUsageCertSign,
+		[]x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth})
+	if err != nil {
+		return nil, err
+	}
 
 	// Determine key type and size
 	keyType := certcrypto.KeyTypeRSA
@@ -104,8 +113,8 @@ func (p *Provider) IssueCertificate(ctx context.Context, req *providerv1.IssueCe
 		DNSNames:              req.Domains,
 		NotBefore:             now,
 		NotAfter:              now.Add(time.Duration(validityDays) * 24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		KeyUsage:              keyUsage,
+		ExtKeyUsage:           extKeyUsage,
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
@@ -157,10 +166,13 @@ func (p *Provider) RenewCertificate(ctx context.Context, req *providerv1.RenewCe
 	issueResp, err := p.IssueCertificate(ctx, &providerv1.IssueCertificateRequest{
 		// The CSR is carried through, so a renewal for a key held on a host
 		// stays a renewal for a key held on that host.
-		CsrPem:  req.CsrPem,
-		Domains: req.Domains,
-		KeyType: req.KeyType,
-		KeySize: req.KeySize,
+		CsrPem:           req.CsrPem,
+		Domains:          req.Domains,
+		KeyType:          req.KeyType,
+		KeySize:          req.KeySize,
+		CaProfile:        req.CaProfile,
+		KeyUsage:         req.KeyUsage,
+		ExtendedKeyUsage: req.ExtendedKeyUsage,
 	})
 	if err != nil {
 		return nil, err
