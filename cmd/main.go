@@ -18,7 +18,7 @@ import (
 
 	"github.com/certpilot/certpilot-gateway-sdk/grpckit"
 	providerv1 "github.com/certpilot/certpilot-gateway-sdk/pb/provider/v1"
-	"github.com/certpilot/certpilot/gateways/selfsigned"
+	selfsigned "github.com/certpilot/certpilot-gateway-selfsigned"
 )
 
 func main() {
