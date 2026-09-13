@@ -6,7 +6,7 @@ certificates with a local CA it generates itself.
 Implements [`provider.v1`](https://github.com/certpilot/certpilot-gateway-sdk).
 
 ```
-docker run --rm -p 9091:9091 ghcr.io/certpilot/gateway-selfsigned:latest
+docker run --rm -p 9091:9091 ghcr.io/certpilot/gateway-selfsigned:0.2.0
 ```
 
 ## What it is for
@@ -58,6 +58,16 @@ go run github.com/certpilot/certpilot-gateway-sdk/cmd/conformance@latest \
 This gateway is the one that can be checked end to end without any external
 dependency, so CI runs the full issuance path here — with and without a CSR —
 on every pull request.
+
+## Releases
+
+`0.2.0`, on `linux/amd64` and `linux/arm64`. Images publish on a tag, never on a
+merge, so `latest` means the most recent release rather than the most recent
+commit — pin anyway for anything you depend on.
+
+The Go module is tagged in step with the image, so
+`go run github.com/certpilot/certpilot-gateway-selfsigned/cmd@v0.2.0` runs the same code
+the image contains.
 
 ## Licence
 
