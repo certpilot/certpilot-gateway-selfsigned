@@ -8,10 +8,13 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"log/slog"
 	"math/big"
+	"sort"
+	"strings"
 	"time"
 
 	certcrypto "github.com/certpilot/certpilot-gateway-sdk/crypto"
@@ -222,11 +225,51 @@ func (p *Provider) HealthCheck(ctx context.Context, req *providerv1.HealthCheckR
 	}, nil
 }
 
-// ValidateConfig validates configuration (always valid for self-signed).
+// ValidateConfig checks a configuration for this gateway, which takes none.
+//
+// It used to `return &ValidateConfigResponse{Valid: true}` unconditionally, on
+// the reasoning that a gateway with no configuration has nothing to reject.
+// That reasoning skips a step: it called a string that is not even JSON a valid
+// configuration, because it never looked at the argument at all.
+//
+// This is the one call that can catch a misconfiguration before a certificate
+// depends on it, and an unconditional yes is worse than no call at all — an
+// operator who mistypes a config is told it is fine. Found by the conformance
+// probe in certpilot-gateway-sdk, on its first run against this gateway.
+//
+// Taking no configuration is still the answer; it is now the answer to a
+// question that was actually asked.
 func (p *Provider) ValidateConfig(ctx context.Context, req *providerv1.ValidateConfigRequest) (*providerv1.ValidateConfigResponse, error) {
-	return &providerv1.ValidateConfigResponse{
-		Valid: true,
-	}, nil
+	raw := strings.TrimSpace(req.GetConfigJson())
+	if raw == "" {
+		return &providerv1.ValidateConfigResponse{Valid: true}, nil
+	}
+
+	var fields map[string]any
+	if err := json.Unmarshal([]byte(raw), &fields); err != nil {
+		return &providerv1.ValidateConfigResponse{
+			Valid:  false,
+			Errors: []string{fmt.Sprintf("this is not valid JSON: %v", err)},
+		}, nil
+	}
+
+	// Every key is unrecognised, because this gateway defines none. A warning
+	// rather than an error: an operator who has pasted a config meant for
+	// another CA should see that none of it is doing anything, without being
+	// blocked from using a gateway that genuinely needs no settings.
+	keys := make([]string, 0, len(fields))
+	for k := range fields {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	resp := &providerv1.ValidateConfigResponse{Valid: true}
+	if len(keys) > 0 {
+		resp.Warnings = []string{fmt.Sprintf(
+			"the self-signed gateway takes no configuration; these keys are ignored: %s",
+			strings.Join(keys, ", "))}
+	}
+	return resp, nil
 }
 
 // extractPublicKey extracts the public key from a private key using crypto.Signer.
