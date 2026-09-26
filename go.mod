@@ -3,7 +3,7 @@ module github.com/certpilot/certpilot-gateway-selfsigned
 go 1.26.6
 
 require (
-	github.com/certpilot/certpilot-gateway-sdk v0.3.1-0.20260926115033-869819370566
+	github.com/certpilot/certpilot-gateway-sdk v0.4.0
 	google.golang.org/protobuf v1.36.12
 )
 
