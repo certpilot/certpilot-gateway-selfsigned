@@ -173,6 +173,11 @@ func (p *Provider) RenewCertificate(ctx context.Context, req *providerv1.RenewCe
 		CaProfile:        req.CaProfile,
 		KeyUsage:         req.KeyUsage,
 		ExtendedKeyUsage: req.ExtendedKeyUsage,
+		// The lifetime the core asked for. Dropped here before, so every
+		// renewal fell back to the 365-day default and a 90-day certificate
+		// came back lasting a year (certpilot/certpilot#102). Zero still means
+		// the default, for a core that does not send it.
+		ValidityDays: req.ValidityDays,
 	})
 	if err != nil {
 		return nil, err
