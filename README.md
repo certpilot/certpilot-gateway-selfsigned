@@ -6,7 +6,7 @@ certificates with a local CA it generates itself.
 Implements [`provider.v1`](https://github.com/certpilot/certpilot-gateway-sdk).
 
 ```
-docker run --rm -p 9091:9091 ghcr.io/certpilot/gateway-selfsigned:0.4.1
+docker run --rm -p 9091:9091 ghcr.io/certpilot/gateway-selfsigned:0.4.2
 ```
 
 ## What it is for
@@ -61,12 +61,12 @@ on every pull request.
 
 ## Releases
 
-`0.4.1`, on `linux/amd64` and `linux/arm64`. Images publish on a tag, never on a
+`0.4.2`, on `linux/amd64` and `linux/arm64`. Images publish on a tag, never on a
 merge, so `latest` means the most recent release rather than the most recent
 commit — pin anyway for anything you depend on.
 
 The Go module is tagged in step with the image, so
-`go run github.com/certpilot/certpilot-gateway-selfsigned/cmd@v0.4.1` runs the same code
+`go run github.com/certpilot/certpilot-gateway-selfsigned/cmd@v0.4.2` runs the same code
 the image contains.
 
 Every tag also gets its release page, created by the same workflow once the image
